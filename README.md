@@ -1,3 +1,4 @@
+![SocialBar Logo](SocialBar-logo.svg)
 # SocialBar
 
 A lightweight, movable World of Warcraft addon for **WoW Midnight (Retail)** that shows your Battle.net friends and guild members who are currently online — right on your screen at all times. Hover to see who's online and where they are. Right-click to invite them instantly.
