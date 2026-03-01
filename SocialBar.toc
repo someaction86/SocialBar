@@ -1,0 +1,8 @@
+## Interface: 120001
+## Title: SocialBar
+## Notes: A movable bar showing Friends and Guild online status with invite options.
+## Version: 1.0.0
+## Author: You
+## SavedVariables: SocialBarDB
+
+SocialBar.lua
