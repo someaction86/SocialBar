@@ -1,4 +1,3 @@
-![SocialBar Logo](SocialBar-logo.png)
 # SocialBar
 
 A lightweight, movable World of Warcraft addon for **WoW Midnight (Retail)** that shows your Battle.net friends and guild members who are currently online — right on your screen at all times. Hover to see who's online and where they are. Right-click to invite them instantly.
@@ -10,7 +9,8 @@ A lightweight, movable World of Warcraft addon for **WoW Midnight (Retail)** tha
 - **Movable bar** — drag it anywhere on your screen, position is saved between sessions
 - **Friends button** — shows all Battle.net friends currently playing WoW Retail (Classic filtered out)
 - **Guild button** — shows all guild members currently online with rank and zone
-- **Hover tooltips** — class-colored names, current zone, and realm for cross-realm friends
+- **Hover tooltips** — class-colored names, level, class, status, current zone, and realm for cross-realm friends
+- **AFK / DND status** — see at a glance if someone is away or busy before you invite
 - **Right-click invite** — invite anyone directly from a dropdown menu
 - **Online count** — optionally shows live counts on the buttons (e.g. `Friends (4)`)
 - **Gear button (⚙)** — quick access to all settings without typing any commands
@@ -47,8 +47,17 @@ You can **left-click and drag** the bar background to reposition it anywhere. Th
 ### Tooltips
 Hovering over either button shows a tooltip with:
 - Each online player's name in their **class color**
+- Their **AFK / DND status** (if applicable), shown in orange or red
+- Their **level and class** in parentheses
 - Their current **zone**
 - Their **realm** (if cross-realm, shown in grey after their name)
+
+Example tooltip line:
+```
+Alric-Stormrage [AFK] (Lvl 82 Paladin) - Eversong Woods
+```
+
+All tooltip fields can be individually toggled on or off in settings.
 
 ### Inviting
 **Right-click** the Friends or Guild button to open an invite dropdown. Click any name to send them a group invite. Cross-realm invites are handled automatically.
@@ -80,14 +89,28 @@ There are three ways to access settings:
 ### Quick Dropdown (⚙ left-click)
 - **Switch to Vertical / Horizontal** — toggle button layout
 - **Show / Hide Online Count** — toggle count display on buttons
+- **Show / Hide AFK/DND Status** — toggle status badges in tooltips
+- **Show / Hide Character Level** — toggle level display in tooltips
+- **Show / Hide Character Class** — toggle class display in tooltips
 - **Font Size +/-** — increase or decrease font size one step at a time
 - **More / Less Transparent** — adjust bar transparency one step at a time
 - **Open Full Settings...** — opens the Interface panel
 - **Reset Position** — snaps bar back to default position
 
 ### Full Settings Panel (Interface > AddOns > SocialBar or ⚙ right-click)
+
+**General**
 - **Show online count on buttons** — checkbox toggle
+
+**Tooltip Info**
+- **Show AFK / DND status** — checkbox toggle
+- **Show character level** — checkbox toggle
+- **Show character class** — checkbox toggle
+
+**Layout**
 - **Vertical layout** — checkbox toggle
+
+**Appearance**
 - **Bar Color** — color picker swatch
 - **Transparency** — slider from 1 (most transparent) to 10 (opaque)
 - **Font Size** — slider from 8pt to 18pt
@@ -137,6 +160,12 @@ If something isn't working correctly, type `/sbdebug` in chat. This will print d
 ---
 
 ## Changelog
+
+### 1.1.0
+- Tooltip now shows character level and class for friends and guild members
+- Tooltip now shows AFK / DND status badges (orange for AFK, red for DND)
+- Added three new toggles: Show Status, Show Level, Show Class — available in both the quick dropdown and the full settings panel
+- New **Tooltip Info** section added to the Interface > AddOns settings panel
 
 ### 1.0.0
 - Initial release
