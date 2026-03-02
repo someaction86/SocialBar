@@ -14,8 +14,6 @@ jobs:
 
       - name: Package and release to CurseForge
         uses: BigWigsMods/packager@v2
-        with:
-          args: -m SocialBar
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           CURSEFORGE_PROJECT_ID: ${{ secrets.CF_PROJECT_ID }}
