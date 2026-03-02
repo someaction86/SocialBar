@@ -3,5 +3,5 @@ package-as: SocialBar
 ignore:
   - .pkgmeta
   - .github
-  - SocialBar-logo.svg
+  - LICENSE
   - SocialBar-logo.png
