@@ -7,17 +7,20 @@
 SocialBarDB = SocialBarDB or {}
 
 local defaults = {
-    x          = 200,
-    y          = -200,
-    point      = "TOPLEFT",
-    relPoint   = "TOPLEFT",
-    barR       = 0.1,
-    barG       = 0.1,
-    barB       = 0.1,
-    barA       = 0.85,
-    fontSize   = 11,
-    layout     = "horizontal",  -- "horizontal" or "vertical"
-    showCount  = true,
+    x           = 200,
+    y           = -200,
+    point       = "TOPLEFT",
+    relPoint    = "TOPLEFT",
+    barR        = 0.1,
+    barG        = 0.1,
+    barB        = 0.1,
+    barA        = 0.85,
+    fontSize    = 11,
+    layout      = "horizontal",
+    showCount   = true,
+    showStatus  = true,
+    showLevel   = true,
+    showClass   = true,
 }
 
 local function GetSetting(key)
@@ -44,14 +47,28 @@ local function RefreshFriendsCache()
             local game = acc.gameAccountInfo
             -- wowProjectID 1 = Retail only, filter out Classic (5), Classic Era (2), etc.
             if game and game.isOnline and game.clientProgram == "WoW" and game.wowProjectID == 1 then
+                -- Determine status: in-game AFK/busy takes priority, then account-level DND/AFK
+                local status = ""
+                if game.isGameBusy then
+                    status = "dnd"
+                elseif game.isGameAFK then
+                    status = "afk"
+                elseif acc.isDND then
+                    status = "dnd"
+                elseif acc.isAFK then
+                    status = "afk"
+                end
                 friendsCache[#friendsCache + 1] = {
                     name       = game.characterName or "Unknown",
                     realm      = game.realmName or "",
                     battleTag  = acc.battleTag or "",
-                    classKey   = (game.className or ""):upper(),
+                    classKey   = (game.className or ""):upper():gsub("%s+", ""),
+                    className  = game.className or "",
+                    level      = game.characterLevel or 0,
                     zone       = game.areaName or "",
                     presenceID = acc.bnetAccountID,
                     playerGuid = game.playerGuid,
+                    status     = status,
                 }
             end
         end
@@ -63,7 +80,7 @@ local function RefreshGuildCache()
     if not IsInGuild() then return end
     local total = GetNumGuildMembers()
     for i = 1, total do
-        local name, rank, _, _, class, zone, _, _, online = GetGuildRosterInfo(i)
+        local name, rank, _, level, class, zone, _, _, online, status = GetGuildRosterInfo(i)
         if online and name then
             -- Name may come as "Character-Realm" for connected realms
             local shortName, realm = name:match("^([^%-]+)-(.+)$")
@@ -71,12 +88,22 @@ local function RefreshGuildCache()
                 shortName = name
                 realm = GetRealmName()
             end
+            -- status: 0 = online, 1 = AFK, 2 = DND
+            local memberStatus = ""
+            if status == 1 then
+                memberStatus = "afk"
+            elseif status == 2 then
+                memberStatus = "dnd"
+            end
             guildCache[#guildCache + 1] = {
-                name     = shortName,
-                realm    = realm,
-                rank     = rank or "",
-                classKey = (class or ""):upper(),
-                zone     = zone or "",
+                name      = shortName,
+                realm     = realm,
+                rank      = rank or "",
+                classKey  = (class or ""):upper():gsub("%s+", ""),
+                className = class or "",
+                level     = level or 0,
+                zone      = zone or "",
+                status    = memberStatus,
             }
         end
     end
@@ -188,6 +215,30 @@ end
 -- ============================================================
 -- Tooltips
 -- ============================================================
+local function GetStatusTag(status)
+    if status == "afk" then
+        return " |cffff9900[AFK]|r"
+    elseif status == "dnd" then
+        return " |cffff4444[DND]|r"
+    end
+    return ""
+end
+
+-- Robust class color lookup: tries C_ClassColor first, falls back to RAID_CLASS_COLORS
+local function GetClassHex(classKey)
+    if classKey and classKey ~= "" then
+        local color = C_ClassColor.GetClassColor(classKey)
+        if color then
+            return color:GenerateHexColorMarkup()
+        end
+        local rc = RAID_CLASS_COLORS[classKey]
+        if rc then
+            return string.format("|cff%02x%02x%02x", rc.r*255, rc.g*255, rc.b*255)
+        end
+    end
+    return "|cffffffff"  -- fallback white
+end
+
 local function ShowFriendsTooltip(anchor)
     GameTooltip:SetOwner(anchor, "ANCHOR_BOTTOM")
     GameTooltip:ClearLines()
@@ -196,13 +247,32 @@ local function ShowFriendsTooltip(anchor)
     if #friendsCache == 0 then
         GameTooltip:AddLine("|cff888888No friends online in WoW Retail.|r")
     else
+        local showStatus = GetSetting("showStatus")
+        local showLevel  = GetSetting("showLevel")
+        local showClass  = GetSetting("showClass")
         for _, f in ipairs(friendsCache) do
-            local c   = RAID_CLASS_COLORS[f.classKey] or { r=1, g=1, b=1 }
-            local hex = string.format("|cff%02x%02x%02x", c.r*255, c.g*255, c.b*255)
+            local hex = GetClassHex(f.classKey)
             local isCrossRealm = f.realm ~= "" and f.realm ~= GetRealmName()
             local realmSuffix = isCrossRealm and ("|cff666666-" .. f.realm .. "|r") or ""
-            local zone = f.zone ~= "" and ("|cffaaaaaa - " .. f.zone .. "|r") or ""
-            GameTooltip:AddLine(hex .. f.name .. "|r" .. realmSuffix .. zone)
+            local statusTag   = showStatus and GetStatusTag(f.status) or ""
+            local zone        = f.zone ~= "" and ("|cffaaaaaa - " .. f.zone .. "|r") or ""
+
+            -- Level/class info tag
+            local infoTag = ""
+            if showLevel or showClass then
+                local parts = {}
+                if showLevel and f.level > 0 then
+                    parts[#parts + 1] = "Lvl " .. f.level
+                end
+                if showClass and f.className ~= "" then
+                    parts[#parts + 1] = f.className
+                end
+                if #parts > 0 then
+                    infoTag = " |cff888888(" .. table.concat(parts, " ") .. ")|r"
+                end
+            end
+
+            GameTooltip:AddLine(hex .. f.name .. "|r" .. realmSuffix .. statusTag .. infoTag .. zone)
         end
     end
     GameTooltip:AddLine(" ")
@@ -223,11 +293,30 @@ local function ShowGuildTooltip(anchor)
     if #guildCache == 0 then
         GameTooltip:AddLine("|cff888888No guild members online.|r")
     else
+        local showStatus = GetSetting("showStatus")
+        local showLevel  = GetSetting("showLevel")
+        local showClass  = GetSetting("showClass")
         for _, m in ipairs(guildCache) do
-            local c   = RAID_CLASS_COLORS[m.classKey] or { r=1, g=1, b=1 }
-            local hex = string.format("|cff%02x%02x%02x", c.r*255, c.g*255, c.b*255)
-            local zone = m.zone ~= "" and ("|cffaaaaaa - " .. m.zone .. "|r") or ""
-            GameTooltip:AddLine(hex .. m.name .. "|r |cff888888(" .. m.rank .. ")|r" .. zone)
+            local hex = GetClassHex(m.classKey)
+            local zone      = m.zone ~= "" and ("|cffaaaaaa - " .. m.zone .. "|r") or ""
+            local statusTag = showStatus and GetStatusTag(m.status) or ""
+
+            -- Level/class info tag
+            local infoTag = ""
+            if showLevel or showClass then
+                local parts = {}
+                if showLevel and m.level > 0 then
+                    parts[#parts + 1] = "Lvl " .. m.level
+                end
+                if showClass and m.className ~= "" then
+                    parts[#parts + 1] = m.className
+                end
+                if #parts > 0 then
+                    infoTag = " |cff888888(" .. table.concat(parts, " ") .. ")|r"
+                end
+            end
+
+            GameTooltip:AddLine(hex .. m.name .. "|r |cff888888(" .. m.rank .. ")|r" .. statusTag .. infoTag .. zone)
         end
     end
     GameTooltip:AddLine(" ")
@@ -404,7 +493,21 @@ local cbCount = MakeCheckbox(configPanel, "Show online count on buttons", sec1, 
     function() return GetSetting("showCount") end,
     function(v) SetSetting("showCount", v) end)
 
-local sec2 = MakeSectionLabel(configPanel, "Layout", cbCount, -16)
+local sec1b = MakeSectionLabel(configPanel, "Tooltip Info", cbCount, -16)
+
+local cbStatus = MakeCheckbox(configPanel, "Show AFK / DND status", sec1b, -8,
+    function() return GetSetting("showStatus") end,
+    function(v) SetSetting("showStatus", v) end)
+
+local cbLevel = MakeCheckbox(configPanel, "Show character level", cbStatus, -4,
+    function() return GetSetting("showLevel") end,
+    function(v) SetSetting("showLevel", v) end)
+
+local cbClass = MakeCheckbox(configPanel, "Show character class", cbLevel, -4,
+    function() return GetSetting("showClass") end,
+    function(v) SetSetting("showClass", v) end)
+
+local sec2 = MakeSectionLabel(configPanel, "Layout", cbClass, -16)
 
 local cbLayout = MakeCheckbox(configPanel, "Vertical layout (stacked buttons)", sec2, -8,
     function() return GetSetting("layout") == "vertical" end,
@@ -474,6 +577,33 @@ local function BarMenu_Initialize(self, level)
     info.func = function()
         SetSetting("showCount", not GetSetting("showCount"))
         ApplySettings()
+    end
+    UIDropDownMenu_AddButton(info, level)
+
+    -- Status toggle
+    info = UIDropDownMenu_CreateInfo()
+    info.text = GetSetting("showStatus") and "Hide AFK/DND Status" or "Show AFK/DND Status"
+    info.notCheckable = true
+    info.func = function()
+        SetSetting("showStatus", not GetSetting("showStatus"))
+    end
+    UIDropDownMenu_AddButton(info, level)
+
+    -- Level toggle
+    info = UIDropDownMenu_CreateInfo()
+    info.text = GetSetting("showLevel") and "Hide Character Level" or "Show Character Level"
+    info.notCheckable = true
+    info.func = function()
+        SetSetting("showLevel", not GetSetting("showLevel"))
+    end
+    UIDropDownMenu_AddButton(info, level)
+
+    -- Class toggle
+    info = UIDropDownMenu_CreateInfo()
+    info.text = GetSetting("showClass") and "Hide Character Class" or "Show Character Class"
+    info.notCheckable = true
+    info.func = function()
+        SetSetting("showClass", not GetSetting("showClass"))
     end
     UIDropDownMenu_AddButton(info, level)
 
