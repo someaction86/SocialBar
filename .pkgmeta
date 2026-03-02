@@ -3,6 +3,5 @@ package-as: SocialBar
 ignore:
   - .pkgmeta
   - .github
-  - README.md
   - SocialBar-logo.svg
   - SocialBar-logo.png
