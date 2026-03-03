@@ -16,7 +16,7 @@ A lightweight, movable World of Warcraft addon for **WoW Midnight (Retail)** tha
 - **Gear button (⚙)** — quick access to all settings without typing any commands
 - **Full settings panel** — available under Interface > AddOns > SocialBar
 - **Horizontal or vertical layout** — switch between side-by-side and stacked buttons
-- **Customizable appearance** — bar color, transparency, and font size
+- **Customizable appearance** — transparency and font size
 
 ---
 
@@ -54,7 +54,7 @@ Hovering over either button shows a tooltip with:
 
 Example tooltip line:
 ```
-Alric-Stormrage [AFK] (Lvl 82 Paladin) - Eversong Woods
+Valdris [AFK] (Lvl 80 Paladin) - Ashenveil
 ```
 
 All tooltip fields can be individually toggled on or off in settings.
@@ -111,7 +111,6 @@ There are three ways to access settings:
 - **Vertical layout** — checkbox toggle
 
 **Appearance**
-- **Bar Color** — color picker swatch
 - **Transparency** — slider from 1 (most transparent) to 10 (opaque)
 - **Font Size** — slider from 8pt to 18pt
 - **Reset Position** — button to restore default bar position
@@ -155,15 +154,22 @@ If something isn't working correctly, type `/sbdebug` in chat. This will print d
 
 - **WoW Version:** Midnight (Retail) — Interface `120001`
 - **Not compatible with:** WoW Classic, Cataclysm Classic, Anniversary Classic
-- **API used:** `C_BattleNet`, `C_PartyInfo`, `BNGetNumFriends`, `GetGuildRosterInfo`
+- **API used:** `C_BattleNet`, `C_PartyInfo`, `C_GuildInfo`, `BNGetNumFriends`, `GetGuildRosterInfo`
 
 ---
 
 ## Changelog
 
+### 1.2.0
+- Fixed `GuildRoster()` API rename — updated to `C_GuildInfo.GuildRoster()` for Midnight compatibility
+- Fixed vertical layout gear button rendering — now correctly stays as a small centered icon instead of stretching to full button width
+- Removed bar color picker — bar is now fixed dark with transparency-only control, simplifying the Appearance settings
+- Updated invite API to use `C_PartyInfo.InviteUnit()` for Midnight compatibility
+
 ### 1.1.0
 - Tooltip now shows character level and class for friends and guild members
 - Tooltip now shows AFK / DND status badges (orange for AFK, red for DND)
+- Fixed class color lookup for Death Knight and Demon Hunter using `C_ClassColor.GetClassColor()` — future-proof for new classes
 - Added three new toggles: Show Status, Show Level, Show Class — available in both the quick dropdown and the full settings panel
 - New **Tooltip Info** section added to the Interface > AddOns settings panel
 
@@ -171,7 +177,7 @@ If something isn't working correctly, type `/sbdebug` in chat. This will print d
 - Initial release
 - Movable Friends/Guild bar with hover tooltips and right-click invite
 - Battle.net friends support (filters out Classic players)
-- Full customization: color, transparency, font size, layout
+- Full customization: transparency, font size, layout
 - Three settings access methods: gear button, right-click menu, Interface panel
 - Slash commands: `/socialbar`, `/sbdebug`
 
