@@ -1,8 +1,8 @@
 ## Interface: 120001
 ## Title: SocialBar
 ## Notes: A movable bar showing Friends and Guild online status with invite options.
-## Version: 1.1.5
-## Author: You
+## Version: 1.1.8
+## Author: someaction86
 ## SavedVariables: SocialBarDB
 ## X-Curse-Project-ID: 1475402
 
