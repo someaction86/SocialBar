@@ -782,7 +782,7 @@ eventFrame:RegisterEvent("BN_CONNECTED")
 eventFrame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_LOGIN" then
         RestorePosition()
-        GuildRoster()
+        C_GuildInfo.GuildRoster()
         RefreshFriendsCache()
         RefreshGuildCache()
         ApplySettings()
