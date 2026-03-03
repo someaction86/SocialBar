@@ -11,9 +11,6 @@ local defaults = {
     y           = -200,
     point       = "TOPLEFT",
     relPoint    = "TOPLEFT",
-    barR        = 0.1,
-    barG        = 0.1,
-    barB        = 0.1,
     barA        = 0.85,
     fontSize    = 11,
     layout      = "horizontal",
@@ -45,9 +42,7 @@ local function RefreshFriendsCache()
         local acc = C_BattleNet.GetFriendAccountInfo(i)
         if acc then
             local game = acc.gameAccountInfo
-            -- wowProjectID 1 = Retail only, filter out Classic (5), Classic Era (2), etc.
             if game and game.isOnline and game.clientProgram == "WoW" and game.wowProjectID == 1 then
-                -- Determine status: in-game AFK/busy takes priority, then account-level DND/AFK
                 local status = ""
                 if game.isGameBusy then
                     status = "dnd"
@@ -82,13 +77,11 @@ local function RefreshGuildCache()
     for i = 1, total do
         local name, rank, _, level, class, zone, _, _, online, status = GetGuildRosterInfo(i)
         if online and name then
-            -- Name may come as "Character-Realm" for connected realms
             local shortName, realm = name:match("^([^%-]+)-(.+)$")
             if not shortName then
                 shortName = name
                 realm = GetRealmName()
             end
-            -- status: 0 = online, 1 = AFK, 2 = DND
             local memberStatus = ""
             if status == 1 then
                 memberStatus = "afk"
@@ -112,7 +105,7 @@ end
 -- ============================================================
 -- Bar & Button references (forward declared for ApplySettings)
 -- ============================================================
-local bar, bg, border
+local bar, bg
 local friendsBtn, guildBtn
 local friendsBtnBg, guildBtnBg
 local friendsText, guildText
@@ -125,15 +118,13 @@ local function ApplySettings()
     local layout    = GetSetting("layout")
     local fontSize  = GetSetting("fontSize")
     local showCount = GetSetting("showCount")
-    local r, g, b, a = GetSetting("barR"), GetSetting("barG"), GetSetting("barB"), GetSetting("barA")
+    local a         = GetSetting("barA")
 
-    -- Bar color
-    bg:SetColorTexture(r, g, b, a)
+    bg:SetColorTexture(0, 0, 0, a)
 
-    -- Layout: resize bar and reposition buttons
-    -- Bar is wider by 22px to fit gear button on the right
     if layout == "vertical" then
-        bar:SetSize(100, 76)
+        -- vertical: Friends / Guild stacked, gear icon small and centered at bottom
+        bar:SetSize(100, 80)
         friendsBtn:ClearAllPoints()
         friendsBtn:SetPoint("TOP", bar, "TOP", 0, -4)
         friendsBtn:SetSize(90, 22)
@@ -142,10 +133,11 @@ local function ApplySettings()
         guildBtn:SetSize(90, 22)
         if gearBtn then
             gearBtn:ClearAllPoints()
-            gearBtn:SetPoint("TOP", bar, "TOP", 0, -52)
-            gearBtn:SetSize(90, 18)
+            gearBtn:SetPoint("TOP", bar, "TOP", 0, -56)
+            gearBtn:SetSize(18, 18)
         end
     else
+        -- horizontal: Friends / Guild side by side, gear icon on the right
         bar:SetSize(182, 28)
         friendsBtn:ClearAllPoints()
         friendsBtn:SetPoint("LEFT", bar, "LEFT", 4, 0)
@@ -155,17 +147,15 @@ local function ApplySettings()
         guildBtn:SetSize(74, 22)
         if gearBtn then
             gearBtn:ClearAllPoints()
-            gearBtn:SetPoint("LEFT", bar, "LEFT", 159, 0)
-            gearBtn:SetSize(20, 22)
+            gearBtn:SetPoint("LEFT", bar, "LEFT", 161, 0)
+            gearBtn:SetSize(18, 18)
         end
     end
 
-    -- Font size
     local font, _, flags = friendsText:GetFont()
     friendsText:SetFont(font or "Fonts\\FRIZQT__.TTF", fontSize, flags or "")
     guildText:SetFont(font or "Fonts\\FRIZQT__.TTF", fontSize, flags or "")
 
-    -- Button labels (with or without count)
     local fCount = showCount and (" |cffaaaaaa(" .. #friendsCache .. ")|r") or ""
     local gCount = showCount and (" |cffaaaaaa(" .. #guildCache .. ")|r") or ""
     friendsText:SetText("|cff00ccffFriends|r" .. fCount)
@@ -176,7 +166,7 @@ end
 -- Bar Frame
 -- ============================================================
 bar = CreateFrame("Frame", "SocialBarFrame", UIParent)
-bar:SetSize(160, 28)
+bar:SetSize(182, 28)
 bar:SetFrameStrata("MEDIUM")
 bar:SetMovable(true)
 bar:EnableMouse(true)
@@ -193,16 +183,7 @@ end)
 
 bg = bar:CreateTexture(nil, "BACKGROUND")
 bg:SetAllPoints()
-bg:SetColorTexture(0.1, 0.1, 0.1, 0.85)
-
-border = CreateFrame("Frame", nil, bar, "BackdropTemplate")
-border:SetAllPoints()
-border:SetBackdrop({
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    edgeSize = 12,
-    insets   = { left = 2, right = 2, top = 2, bottom = 2 },
-})
-border:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
+bg:SetColorTexture(0, 0, 0, 0.85)
 
 local function RestorePosition()
     bar:ClearAllPoints()
@@ -224,7 +205,6 @@ local function GetStatusTag(status)
     return ""
 end
 
--- Robust class color lookup: tries C_ClassColor first, falls back to RAID_CLASS_COLORS
 local function GetClassHex(classKey)
     if classKey and classKey ~= "" then
         local color = C_ClassColor.GetClassColor(classKey)
@@ -236,7 +216,7 @@ local function GetClassHex(classKey)
             return string.format("|cff%02x%02x%02x", rc.r*255, rc.g*255, rc.b*255)
         end
     end
-    return "|cffffffff"  -- fallback white
+    return "|cffffffff"
 end
 
 local function ShowFriendsTooltip(anchor)
@@ -256,8 +236,6 @@ local function ShowFriendsTooltip(anchor)
             local realmSuffix = isCrossRealm and ("|cff666666-" .. f.realm .. "|r") or ""
             local statusTag   = showStatus and GetStatusTag(f.status) or ""
             local zone        = f.zone ~= "" and ("|cffaaaaaa - " .. f.zone .. "|r") or ""
-
-            -- Level/class info tag
             local infoTag = ""
             if showLevel or showClass then
                 local parts = {}
@@ -271,7 +249,6 @@ local function ShowFriendsTooltip(anchor)
                     infoTag = " |cff888888(" .. table.concat(parts, " ") .. ")|r"
                 end
             end
-
             GameTooltip:AddLine(hex .. f.name .. "|r" .. realmSuffix .. statusTag .. infoTag .. zone)
         end
     end
@@ -300,8 +277,6 @@ local function ShowGuildTooltip(anchor)
             local hex = GetClassHex(m.classKey)
             local zone      = m.zone ~= "" and ("|cffaaaaaa - " .. m.zone .. "|r") or ""
             local statusTag = showStatus and GetStatusTag(m.status) or ""
-
-            -- Level/class info tag
             local infoTag = ""
             if showLevel or showClass then
                 local parts = {}
@@ -315,7 +290,6 @@ local function ShowGuildTooltip(anchor)
                     infoTag = " |cff888888(" .. table.concat(parts, " ") .. ")|r"
                 end
             end
-
             GameTooltip:AddLine(hex .. m.name .. "|r |cff888888(" .. m.rank .. ")|r" .. statusTag .. infoTag .. zone)
         end
     end
@@ -398,7 +372,6 @@ local panelSub = configPanel:CreateFontString(nil, "ARTWORK", "GameFontHighlight
 panelSub:SetPoint("TOPLEFT", panelTitle, "BOTTOMLEFT", 0, -4)
 panelSub:SetText("You can also right-click the bar or use /socialbar config")
 
--- Helper: section label
 local function MakeSectionLabel(parent, text, anchorTo, offsetY)
     local lbl = parent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     lbl:SetPoint("TOPLEFT", anchorTo, "BOTTOMLEFT", 0, offsetY or -12)
@@ -406,7 +379,6 @@ local function MakeSectionLabel(parent, text, anchorTo, offsetY)
     return lbl
 end
 
--- Helper: checkbox
 local function MakeCheckbox(parent, label, anchorTo, offsetY, getter, setter)
     local cb = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     cb:SetPoint("TOPLEFT", anchorTo, "BOTTOMLEFT", -2, offsetY or -8)
@@ -419,12 +391,10 @@ local function MakeCheckbox(parent, label, anchorTo, offsetY, getter, setter)
     return cb
 end
 
--- Helper: slider
 local function MakeSlider(parent, label, min, max, step, anchorTo, offsetY, getter, setter)
     local f = CreateFrame("Frame", nil, parent)
     f:SetSize(200, 40)
     f:SetPoint("TOPLEFT", anchorTo, "BOTTOMLEFT", 0, offsetY or -20)
-
     local sl = CreateFrame("Slider", nil, f, "OptionsSliderTemplate")
     sl:SetPoint("TOPLEFT", f, "TOPLEFT", 0, 0)
     sl:SetWidth(200)
@@ -441,49 +411,6 @@ local function MakeSlider(parent, label, min, max, step, anchorTo, offsetY, gett
         ApplySettings()
     end)
     return f, sl
-end
-
--- Helper: color swatch row
-local function MakeColorPicker(parent, anchorTo, offsetY)
-    local lbl = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-    lbl:SetPoint("TOPLEFT", anchorTo, "BOTTOMLEFT", 0, offsetY or -20)
-    lbl:SetText("Bar Color")
-
-    local swatch = CreateFrame("Button", nil, parent)
-    swatch:SetSize(24, 24)
-    swatch:SetPoint("LEFT", lbl, "RIGHT", 8, 0)
-
-    local swatchTex = swatch:CreateTexture(nil, "BACKGROUND")
-    swatchTex:SetAllPoints()
-    swatchTex:SetColorTexture(GetSetting("barR"), GetSetting("barG"), GetSetting("barB"), 1)
-
-    local swatchBorder = swatch:CreateTexture(nil, "OVERLAY")
-    swatchBorder:SetAllPoints()
-    swatchBorder:SetTexture("Interface\\ChatFrame\\ChatFrameColorSwatch")
-
-    swatch:SetScript("OnClick", function()
-        local r, g, b = GetSetting("barR"), GetSetting("barG"), GetSetting("barB")
-        ColorPickerFrame:SetupColorPickerAndShow({
-            r = r, g = g, b = b,
-            hasOpacity = false,
-            swatchFunc = function()
-                local nr, ng, nb = ColorPickerFrame:GetColorRGB()
-                SetSetting("barR", nr)
-                SetSetting("barG", ng)
-                SetSetting("barB", nb)
-                swatchTex:SetColorTexture(nr, ng, nb, 1)
-                ApplySettings()
-            end,
-            cancelFunc = function(prev)
-                SetSetting("barR", prev.r)
-                SetSetting("barG", prev.g)
-                SetSetting("barB", prev.b)
-                swatchTex:SetColorTexture(prev.r, prev.g, prev.b, 1)
-                ApplySettings()
-            end,
-        })
-    end)
-    return lbl, swatch, swatchTex
 end
 
 -- Build the panel UI
@@ -515,9 +442,7 @@ local cbLayout = MakeCheckbox(configPanel, "Vertical layout (stacked buttons)", 
 
 local sec3 = MakeSectionLabel(configPanel, "Appearance", cbLayout, -16)
 
-local colorLbl, colorSwatch, colorSwatchTex = MakeColorPicker(configPanel, sec3, -8)
-
-local alphaFrame, alphaSlider = MakeSlider(configPanel, "Transparency", 1, 10, 1, colorLbl, -20,
+local alphaFrame, alphaSlider = MakeSlider(configPanel, "Transparency", 1, 10, 1, sec3, -8,
     function() return math.floor((1 - GetSetting("barA")) * 10 + 0.5) end,
     function(v) SetSetting("barA", 1 - v/10) end)
 
@@ -554,12 +479,10 @@ local barMenu = CreateFrame("Frame", "SocialBarConfigDropdown", UIParent, "UIDro
 local function BarMenu_Initialize(self, level)
     local info
 
-    -- Title
     info = UIDropDownMenu_CreateInfo()
     info.text = "SocialBar Options"; info.isTitle = true; info.notCheckable = true
     UIDropDownMenu_AddButton(info, level)
 
-    -- Layout toggle
     info = UIDropDownMenu_CreateInfo()
     local isVert = GetSetting("layout") == "vertical"
     info.text = isVert and "Switch to Horizontal" or "Switch to Vertical"
@@ -570,7 +493,6 @@ local function BarMenu_Initialize(self, level)
     end
     UIDropDownMenu_AddButton(info, level)
 
-    -- Count toggle
     info = UIDropDownMenu_CreateInfo()
     info.text = GetSetting("showCount") and "Hide Online Count" or "Show Online Count"
     info.notCheckable = true
@@ -580,7 +502,6 @@ local function BarMenu_Initialize(self, level)
     end
     UIDropDownMenu_AddButton(info, level)
 
-    -- Status toggle
     info = UIDropDownMenu_CreateInfo()
     info.text = GetSetting("showStatus") and "Hide AFK/DND Status" or "Show AFK/DND Status"
     info.notCheckable = true
@@ -589,7 +510,6 @@ local function BarMenu_Initialize(self, level)
     end
     UIDropDownMenu_AddButton(info, level)
 
-    -- Level toggle
     info = UIDropDownMenu_CreateInfo()
     info.text = GetSetting("showLevel") and "Hide Character Level" or "Show Character Level"
     info.notCheckable = true
@@ -598,7 +518,6 @@ local function BarMenu_Initialize(self, level)
     end
     UIDropDownMenu_AddButton(info, level)
 
-    -- Class toggle
     info = UIDropDownMenu_CreateInfo()
     info.text = GetSetting("showClass") and "Hide Character Class" or "Show Character Class"
     info.notCheckable = true
@@ -607,7 +526,6 @@ local function BarMenu_Initialize(self, level)
     end
     UIDropDownMenu_AddButton(info, level)
 
-    -- Font size up/down
     info = UIDropDownMenu_CreateInfo()
     info.text = "Font Size +"; info.notCheckable = true
     info.func = function()
@@ -626,7 +544,6 @@ local function BarMenu_Initialize(self, level)
     end
     UIDropDownMenu_AddButton(info, level)
 
-    -- Transparency up/down
     info = UIDropDownMenu_CreateInfo()
     info.text = "More Transparent"; info.notCheckable = true
     info.func = function()
@@ -645,7 +562,6 @@ local function BarMenu_Initialize(self, level)
     end
     UIDropDownMenu_AddButton(info, level)
 
-    -- Open full panel
     info = UIDropDownMenu_CreateInfo()
     info.text = "|cffaaaaaa Open Full Settings...|r"; info.notCheckable = true
     info.func = function()
@@ -653,7 +569,6 @@ local function BarMenu_Initialize(self, level)
     end
     UIDropDownMenu_AddButton(info, level)
 
-    -- Separator + Reset
     info = UIDropDownMenu_CreateInfo()
     info.text = "Reset Position"; info.notCheckable = true
     info.func = function()
@@ -681,20 +596,27 @@ local function CreateBarButton(parent, xOffset)
     btn:SetSize(74, 22)
     btn:SetPoint("LEFT", parent, "LEFT", xOffset, 0)
     btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    local btnBg = btn:CreateTexture(nil, "BACKGROUND")
-    btnBg:SetAllPoints()
-    btnBg:SetColorTexture(0.2, 0.2, 0.2, 0.9)
     local hl = btn:CreateTexture(nil, "HIGHLIGHT")
     hl:SetAllPoints()
-    hl:SetColorTexture(1, 1, 1, 0.1)
+    hl:SetColorTexture(1, 1, 1, 0.08)
     local text = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     text:SetAllPoints()
-    return btn, btnBg, text
+    return btn, nil, text
 end
 
 friendsBtn, friendsBtnBg, friendsText = CreateBarButton(bar, 4)
 friendsText:SetText("|cff00ccffFriends|r")
 
+friendsBtn:RegisterForDrag("LeftButton")
+friendsBtn:SetScript("OnDragStart", function() bar:StartMoving() end)
+friendsBtn:SetScript("OnDragStop", function()
+    bar:StopMovingOrSizing()
+    local point, _, relPoint, x, y = bar:GetPoint()
+    SetSetting("point",    point)
+    SetSetting("relPoint", relPoint)
+    SetSetting("x",        x)
+    SetSetting("y",        y)
+end)
 friendsBtn:SetScript("OnEnter", function(self)
     RefreshFriendsCache()
     ShowFriendsTooltip(self)
@@ -707,13 +629,22 @@ friendsBtn:SetScript("OnClick", function(self, button)
         UIDropDownMenu_Initialize(friendsDropdown, FriendsDropdown_Initialize)
         ToggleDropDownMenu(1, nil, friendsDropdown, self, 0, -4)
     end
-    -- Stop click from bubbling up to the bar's OnMouseUp
     return true
 end)
 
 guildBtn, guildBtnBg, guildText = CreateBarButton(bar, 82)
 guildText:SetText("|cff00ff44Guild|r")
 
+guildBtn:RegisterForDrag("LeftButton")
+guildBtn:SetScript("OnDragStart", function() bar:StartMoving() end)
+guildBtn:SetScript("OnDragStop", function()
+    bar:StopMovingOrSizing()
+    local point, _, relPoint, x, y = bar:GetPoint()
+    SetSetting("point",    point)
+    SetSetting("relPoint", relPoint)
+    SetSetting("x",        x)
+    SetSetting("y",        y)
+end)
 guildBtn:SetScript("OnEnter", function(self)
     RefreshGuildCache()
     ShowGuildTooltip(self)
@@ -726,7 +657,6 @@ guildBtn:SetScript("OnClick", function(self, button)
         UIDropDownMenu_Initialize(guildDropdown, GuildDropdown_Initialize)
         ToggleDropDownMenu(1, nil, guildDropdown, self, 0, -4)
     end
-    -- Stop click from bubbling up to the bar's OnMouseUp
     return true
 end)
 
@@ -734,21 +664,27 @@ end)
 -- Gear Button
 -- ============================================================
 gearBtn = CreateFrame("Button", nil, bar)
-gearBtn:SetSize(20, 22)
-gearBtn:SetPoint("LEFT", bar, "LEFT", 159, 0)
+gearBtn:SetSize(18, 18)
+gearBtn:SetPoint("LEFT", bar, "LEFT", 161, 0)
 gearBtn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+gearBtn:RegisterForDrag("LeftButton")
+gearBtn:SetScript("OnDragStart", function() bar:StartMoving() end)
+gearBtn:SetScript("OnDragStop", function()
+    bar:StopMovingOrSizing()
+    local point, _, relPoint, x, y = bar:GetPoint()
+    SetSetting("point",    point)
+    SetSetting("relPoint", relPoint)
+    SetSetting("x",        x)
+    SetSetting("y",        y)
+end)
 
-local gearBg = gearBtn:CreateTexture(nil, "BACKGROUND")
-gearBg:SetAllPoints()
-gearBg:SetColorTexture(0.15, 0.15, 0.15, 0.9)
+local gearIcon = gearBtn:CreateTexture(nil, "ARTWORK")
+gearIcon:SetAllPoints()
+gearIcon:SetTexture("Interface\\GossipFrame\\GossipGossipIcon")
 
 local gearHl = gearBtn:CreateTexture(nil, "HIGHLIGHT")
 gearHl:SetAllPoints()
-gearHl:SetColorTexture(1, 1, 1, 0.15)
-
-local gearText = gearBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-gearText:SetAllPoints()
-gearText:SetText("|cffaaaaaa⚙|r")
+gearHl:SetColorTexture(1, 1, 1, 0.2)
 
 gearBtn:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
@@ -803,8 +739,8 @@ eventFrame:SetScript("OnEvent", function(self, event)
 end)
 
 -- ============================================================
--- /socialbar config  →  open settings panel
--- /socialbar reset   →  reset position
+-- /socialbar config  ->  open settings panel
+-- /socialbar reset   ->  reset position
 -- ============================================================
 SLASH_SOCIALBAR1 = "/socialbar"
 SlashCmdList["SOCIALBAR"] = function(msg)
@@ -824,7 +760,7 @@ SlashCmdList["SOCIALBAR"] = function(msg)
 end
 
 -- ============================================================
--- /sbdebug  →  BNet diagnostic
+-- /sbdebug  ->  BNet diagnostic
 -- ============================================================
 SLASH_SBDEBUG1 = "/sbdebug"
 SlashCmdList["SBDEBUG"] = function()
@@ -838,7 +774,7 @@ SlashCmdList["SBDEBUG"] = function()
             local game = acc.gameAccountInfo
             if game and game.isOnline and game.clientProgram == "WoW" then
                 wowCount = wowCount + 1
-                if wowCount <= 3 then  -- only dump first 3 to avoid chat spam
+                if wowCount <= 3 then
                     print("--- WoW Friend #" .. i .. " ---")
                     print("  acc fields:")
                     for k, v in pairs(acc) do
