@@ -10,6 +10,7 @@ A lightweight, movable World of Warcraft addon for **WoW Midnight (Retail)** tha
 - **Friends button** — shows all Battle.net friends currently playing WoW Retail (Classic filtered out)
 - **Guild button** — shows all guild members currently online with rank and zone
 - **Hover tooltips** — class-colored names, level, class, status, current zone, and realm for cross-realm friends
+- **Shift+hover** — hold Shift over the Friends button to see each friend's BattleTag and realm
 - **AFK / DND status** — see at a glance if someone is away or busy before you invite
 - **Right-click invite** — invite anyone directly from a dropdown menu
 - **Online count** — optionally shows live counts on the buttons (e.g. `Friends (4)`)
@@ -58,6 +59,15 @@ Valdris [AFK] (Lvl 80 Paladin) - Ashenveil
 ```
 
 All tooltip fields can be individually toggled on or off in settings.
+
+### Shift+Hover (Friends BattleTag View)
+Hold **Shift** while hovering over the Friends button to switch to BattleTag view. This shows each friend's BattleTag and realm instead of the normal character info. Release Shift to return to the standard tooltip. The tooltip switches instantly — no need to move your mouse.
+
+Example BattleTag view:
+```
+Valdris    SomeFriend#1234
+  Realm: Ashenveil
+```
 
 ### Inviting
 **Right-click** the Friends or Guild button to open an invite dropdown. Click any name to send them a group invite. Cross-realm invites are handled automatically.
@@ -159,6 +169,11 @@ If something isn't working correctly, type `/sbdebug` in chat. This will print d
 ---
 
 ## Changelog
+
+### 1.3.0
+- Added **Shift+hover** on the Friends button to show BattleTag and realm for each online friend
+- Tooltip switches instantly between normal and BattleTag view as you hold or release Shift
+- Normal tooltip footer now shows a hint: "Hold Shift for BattleNet info"
 
 ### 1.2.0
 - Fixed `GuildRoster()` API rename — updated to `C_GuildInfo.GuildRoster()` for Midnight compatibility
