@@ -123,7 +123,6 @@ local function ApplySettings()
     bg:SetColorTexture(0, 0, 0, a)
 
     if layout == "vertical" then
-        -- vertical: Friends / Guild stacked, gear icon small and centered at bottom
         bar:SetSize(100, 80)
         friendsBtn:ClearAllPoints()
         friendsBtn:SetPoint("TOP", bar, "TOP", 0, -4)
@@ -137,7 +136,6 @@ local function ApplySettings()
             gearBtn:SetSize(18, 18)
         end
     else
-        -- horizontal: Friends / Guild side by side, gear icon on the right
         bar:SetSize(182, 28)
         friendsBtn:ClearAllPoints()
         friendsBtn:SetPoint("LEFT", bar, "LEFT", 4, 0)
@@ -222,38 +220,60 @@ end
 local function ShowFriendsTooltip(anchor)
     GameTooltip:SetOwner(anchor, "ANCHOR_BOTTOM")
     GameTooltip:ClearLines()
-    GameTooltip:AddLine("|cff00ccffFriends Online (" .. #friendsCache .. ")|r")
-    GameTooltip:AddLine(" ")
-    if #friendsCache == 0 then
-        GameTooltip:AddLine("|cff888888No friends online in WoW Retail.|r")
-    else
-        local showStatus = GetSetting("showStatus")
-        local showLevel  = GetSetting("showLevel")
-        local showClass  = GetSetting("showClass")
-        for _, f in ipairs(friendsCache) do
-            local hex = GetClassHex(f.classKey)
-            local isCrossRealm = f.realm ~= "" and f.realm ~= GetRealmName()
-            local realmSuffix = isCrossRealm and ("|cff666666-" .. f.realm .. "|r") or ""
-            local statusTag   = showStatus and GetStatusTag(f.status) or ""
-            local zone        = f.zone ~= "" and ("|cffaaaaaa - " .. f.zone .. "|r") or ""
-            local infoTag = ""
-            if showLevel or showClass then
-                local parts = {}
-                if showLevel and f.level > 0 then
-                    parts[#parts + 1] = "Lvl " .. f.level
-                end
-                if showClass and f.className ~= "" then
-                    parts[#parts + 1] = f.className
-                end
-                if #parts > 0 then
-                    infoTag = " |cff888888(" .. table.concat(parts, " ") .. ")|r"
+
+    local isShift = IsShiftKeyDown()
+
+    if isShift then
+        GameTooltip:AddLine("|cff00ccffFriends — BattleNet Info|r")
+        GameTooltip:AddLine(" ")
+        if #friendsCache == 0 then
+            GameTooltip:AddLine("|cff888888No friends online in WoW Retail.|r")
+        else
+            for _, f in ipairs(friendsCache) do
+                local hex = GetClassHex(f.classKey)
+                GameTooltip:AddLine(hex .. f.name .. "|r  |cffaaaaaa" .. f.battleTag .. "|r")
+                if f.realm ~= "" then
+                    GameTooltip:AddLine("|cff666666  Realm: " .. f.realm .. "|r")
                 end
             end
-            GameTooltip:AddLine(hex .. f.name .. "|r" .. realmSuffix .. statusTag .. infoTag .. zone)
         end
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("|cff888888Release Shift for normal view|r")
+    else
+        GameTooltip:AddLine("|cff00ccffFriends Online (" .. #friendsCache .. ")|r")
+        GameTooltip:AddLine(" ")
+        if #friendsCache == 0 then
+            GameTooltip:AddLine("|cff888888No friends online in WoW Retail.|r")
+        else
+            local showStatus = GetSetting("showStatus")
+            local showLevel  = GetSetting("showLevel")
+            local showClass  = GetSetting("showClass")
+            for _, f in ipairs(friendsCache) do
+                local hex = GetClassHex(f.classKey)
+                local isCrossRealm = f.realm ~= "" and f.realm ~= GetRealmName()
+                local realmSuffix = isCrossRealm and ("|cff666666-" .. f.realm .. "|r") or ""
+                local statusTag   = showStatus and GetStatusTag(f.status) or ""
+                local zone        = f.zone ~= "" and ("|cffaaaaaa - " .. f.zone .. "|r") or ""
+                local infoTag = ""
+                if showLevel or showClass then
+                    local parts = {}
+                    if showLevel and f.level > 0 then
+                        parts[#parts + 1] = "Lvl " .. f.level
+                    end
+                    if showClass and f.className ~= "" then
+                        parts[#parts + 1] = f.className
+                    end
+                    if #parts > 0 then
+                        infoTag = " |cff888888(" .. table.concat(parts, " ") .. ")|r"
+                    end
+                end
+                GameTooltip:AddLine(hex .. f.name .. "|r" .. realmSuffix .. statusTag .. infoTag .. zone)
+            end
+        end
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("|cffddddddRight-click to invite  |cff888888Hold Shift for BattleNet info|r")
     end
-    GameTooltip:AddLine(" ")
-    GameTooltip:AddLine("|cffddddddRight-click to invite|r")
+
     GameTooltip:Show()
 end
 
@@ -463,7 +483,6 @@ resetBtn:SetScript("OnClick", function()
     print("|cff00ccffSocialBar|r: Position reset.")
 end)
 
--- Register with Blizzard's Interface > AddOns panel
 local category = Settings.RegisterCanvasLayoutCategory(configPanel, "SocialBar")
 Settings.RegisterAddOnCategory(category)
 
@@ -620,11 +639,25 @@ end)
 friendsBtn:SetScript("OnEnter", function(self)
     RefreshFriendsCache()
     ShowFriendsTooltip(self)
+    -- Start tracking Shift key, capturing current state fresh each hover
+    local lastShift = IsShiftKeyDown()
+    friendsBtn:SetScript("OnUpdate", function(s)
+        local shiftNow = IsShiftKeyDown()
+        if shiftNow ~= lastShift then
+            lastShift = shiftNow
+            ShowFriendsTooltip(s)
+        end
+    end)
 end)
-friendsBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+friendsBtn:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+    -- Stop tracking Shift key when mouse leaves
+    friendsBtn:SetScript("OnUpdate", nil)
+end)
 friendsBtn:SetScript("OnClick", function(self, button)
     if button == "RightButton" then
         GameTooltip:Hide()
+        friendsBtn:SetScript("OnUpdate", nil)
         RefreshFriendsCache()
         UIDropDownMenu_Initialize(friendsDropdown, FriendsDropdown_Initialize)
         ToggleDropDownMenu(1, nil, friendsDropdown, self, 0, -4)
