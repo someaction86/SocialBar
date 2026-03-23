@@ -1,6 +1,6 @@
 # SocialBar
 
-A lightweight, movable World of Warcraft addon for **WoW Midnight (Retail)** that shows your Battle.net friends and guild members who are currently online — right on your screen at all times. Hover to see who's online and where they are. Right-click to invite them instantly.
+A lightweight, movable World of Warcraft addon for **WoW Midnight (Retail)** that shows your Battle.net friends and guild members who are currently online — right on your screen at all times. Hover to see who's online and where they are. Click to invite or whisper them instantly.
 
 ---
 
@@ -12,7 +12,8 @@ A lightweight, movable World of Warcraft addon for **WoW Midnight (Retail)** tha
 - **Hover tooltips** — class-colored names, level, class, status, current zone, and realm for cross-realm friends
 - **Shift+hover** — hold Shift over the Friends button to see each friend's BattleTag and realm
 - **AFK / DND status** — see at a glance if someone is away or busy before you invite
-- **Right-click invite** — invite anyone directly from a dropdown menu
+- **Left-click invite** — invite anyone directly from a dropdown menu
+- **Right-click whisper** — open a whisper to anyone directly from a dropdown menu
 - **Online count** — optionally shows live counts on the buttons (e.g. `Friends (4)`)
 - **Gear button (⚙)** — quick access to all settings without typing any commands
 - **Full settings panel** — available under Interface > AddOns > SocialBar
@@ -70,7 +71,10 @@ Valdris    SomeFriend#1234
 ```
 
 ### Inviting
-**Right-click** the Friends or Guild button to open an invite dropdown. Click any name to send them a group invite. Cross-realm invites are handled automatically.
+**Left-click** the Friends or Guild button to open an invite dropdown. Click any name to send them a group invite. Cross-realm invites are handled automatically.
+
+### Whispering
+**Right-click** the Friends or Guild button to open a whisper dropdown. Click any name to open a whisper in your chat box with their name pre-filled — just start typing your message.
 
 ### Settings
 There are three ways to access settings:
@@ -165,36 +169,6 @@ If something isn't working correctly, type `/sbdebug` in chat. This will print d
 - **WoW Version:** Midnight (Retail) — Interface `120001`
 - **Not compatible with:** WoW Classic, Cataclysm Classic, Anniversary Classic
 - **API used:** `C_BattleNet`, `C_PartyInfo`, `C_GuildInfo`, `BNGetNumFriends`, `GetGuildRosterInfo`
-
----
-
-## Changelog
-
-### 1.3.0
-- Added **Shift+hover** on the Friends button to show BattleTag and realm for each online friend
-- Tooltip switches instantly between normal and BattleTag view as you hold or release Shift
-- Normal tooltip footer now shows a hint: "Hold Shift for BattleNet info"
-
-### 1.2.0
-- Fixed `GuildRoster()` API rename — updated to `C_GuildInfo.GuildRoster()` for Midnight compatibility
-- Fixed vertical layout gear button rendering — now correctly stays as a small centered icon instead of stretching to full button width
-- Removed bar color picker — bar is now fixed dark with transparency-only control, simplifying the Appearance settings
-- Updated invite API to use `C_PartyInfo.InviteUnit()` for Midnight compatibility
-
-### 1.1.0
-- Tooltip now shows character level and class for friends and guild members
-- Tooltip now shows AFK / DND status badges (orange for AFK, red for DND)
-- Fixed class color lookup for Death Knight and Demon Hunter using `C_ClassColor.GetClassColor()` — future-proof for new classes
-- Added three new toggles: Show Status, Show Level, Show Class — available in both the quick dropdown and the full settings panel
-- New **Tooltip Info** section added to the Interface > AddOns settings panel
-
-### 1.0.0
-- Initial release
-- Movable Friends/Guild bar with hover tooltips and right-click invite
-- Battle.net friends support (filters out Classic players)
-- Full customization: transparency, font size, layout
-- Three settings access methods: gear button, right-click menu, Interface panel
-- Slash commands: `/socialbar`, `/sbdebug`
 
 ---
 
