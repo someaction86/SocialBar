@@ -271,7 +271,7 @@ local function ShowFriendsTooltip(anchor)
             end
         end
         GameTooltip:AddLine(" ")
-        GameTooltip:AddLine("|cffddddddRight-click to invite  |cff888888Hold Shift for BattleNet info|r")
+        GameTooltip:AddLine("|cffddddddLeft-click: Invite  Right-click: Whisper  |cff888888Hold Shift for BattleNet info|r")
     end
 
     GameTooltip:Show()
@@ -314,15 +314,15 @@ local function ShowGuildTooltip(anchor)
         end
     end
     GameTooltip:AddLine(" ")
-    GameTooltip:AddLine("|cffddddddRight-click to invite|r")
+    GameTooltip:AddLine("|cffddddddLeft-click: Invite  Right-click: Whisper|r")
     GameTooltip:Show()
 end
 
 -- ============================================================
 -- Dropdowns: Invite menus
 -- ============================================================
-local friendsDropdown = CreateFrame("Frame", "SocialBarFriendsDropdown", UIParent, "UIDropDownMenuTemplate")
-local function FriendsDropdown_Initialize(self, level)
+local friendsInviteDropdown = CreateFrame("Frame", "SocialBarFriendsInviteDropdown", UIParent, "UIDropDownMenuTemplate")
+local function FriendsInviteDropdown_Initialize(self, level)
     local info = UIDropDownMenu_CreateInfo()
     info.text = "Invite Friend"; info.isTitle = true; info.notCheckable = true
     UIDropDownMenu_AddButton(info, level)
@@ -349,8 +349,35 @@ local function FriendsDropdown_Initialize(self, level)
     end
 end
 
-local guildDropdown = CreateFrame("Frame", "SocialBarGuildDropdown", UIParent, "UIDropDownMenuTemplate")
-local function GuildDropdown_Initialize(self, level)
+-- ============================================================
+-- Dropdowns: Whisper menus
+-- ============================================================
+local friendsWhisperDropdown = CreateFrame("Frame", "SocialBarFriendsWhisperDropdown", UIParent, "UIDropDownMenuTemplate")
+local function FriendsWhisperDropdown_Initialize(self, level)
+    local info = UIDropDownMenu_CreateInfo()
+    info.text = "Whisper Friend"; info.isTitle = true; info.notCheckable = true
+    UIDropDownMenu_AddButton(info, level)
+    if #friendsCache == 0 then
+        info = UIDropDownMenu_CreateInfo()
+        info.text = "No friends online in WoW"; info.disabled = true; info.notCheckable = true
+        UIDropDownMenu_AddButton(info, level)
+        return
+    end
+    for _, f in ipairs(friendsCache) do
+        info = UIDropDownMenu_CreateInfo()
+        local isCrossRealm = f.realm ~= "" and f.realm ~= GetRealmName()
+        info.text = isCrossRealm and (f.name .. " (" .. f.realm .. ")") or f.name
+        info.notCheckable = true
+        local whisperName = f.realm ~= "" and (f.name .. "-" .. f.realm) or f.name
+        info.func = function()
+            ChatFrame_OpenChat("/w " .. whisperName .. " ")
+        end
+        UIDropDownMenu_AddButton(info, level)
+    end
+end
+
+local guildInviteDropdown = CreateFrame("Frame", "SocialBarGuildInviteDropdown", UIParent, "UIDropDownMenuTemplate")
+local function GuildInviteDropdown_Initialize(self, level)
     local info = UIDropDownMenu_CreateInfo()
     info.text = "Invite Guild Member"; info.isTitle = true; info.notCheckable = true
     UIDropDownMenu_AddButton(info, level)
@@ -373,6 +400,31 @@ local function GuildDropdown_Initialize(self, level)
             if not ok then
                 print("|cffff0000SocialBar invite error:|r " .. tostring(err))
             end
+        end
+        UIDropDownMenu_AddButton(info, level)
+    end
+end
+
+local guildWhisperDropdown = CreateFrame("Frame", "SocialBarGuildWhisperDropdown", UIParent, "UIDropDownMenuTemplate")
+local function GuildWhisperDropdown_Initialize(self, level)
+    local info = UIDropDownMenu_CreateInfo()
+    info.text = "Whisper Guild Member"; info.isTitle = true; info.notCheckable = true
+    UIDropDownMenu_AddButton(info, level)
+    if not IsInGuild() or #guildCache == 0 then
+        info = UIDropDownMenu_CreateInfo()
+        info.text = IsInGuild() and "No members online" or "Not in a guild"
+        info.disabled = true; info.notCheckable = true
+        UIDropDownMenu_AddButton(info, level)
+        return
+    end
+    for _, m in ipairs(guildCache) do
+        info = UIDropDownMenu_CreateInfo()
+        info.text = m.name; info.notCheckable = true
+        local n = m.name
+        local r = m.realm
+        info.func = function()
+            local whisperName = n .. "-" .. r
+            ChatFrame_OpenChat("/w " .. whisperName .. " ")
         end
         UIDropDownMenu_AddButton(info, level)
     end
@@ -639,7 +691,6 @@ end)
 friendsBtn:SetScript("OnEnter", function(self)
     RefreshFriendsCache()
     ShowFriendsTooltip(self)
-    -- Start tracking Shift key, capturing current state fresh each hover
     local lastShift = IsShiftKeyDown()
     friendsBtn:SetScript("OnUpdate", function(s)
         local shiftNow = IsShiftKeyDown()
@@ -651,16 +702,18 @@ friendsBtn:SetScript("OnEnter", function(self)
 end)
 friendsBtn:SetScript("OnLeave", function()
     GameTooltip:Hide()
-    -- Stop tracking Shift key when mouse leaves
     friendsBtn:SetScript("OnUpdate", nil)
 end)
 friendsBtn:SetScript("OnClick", function(self, button)
-    if button == "RightButton" then
-        GameTooltip:Hide()
-        friendsBtn:SetScript("OnUpdate", nil)
-        RefreshFriendsCache()
-        UIDropDownMenu_Initialize(friendsDropdown, FriendsDropdown_Initialize)
-        ToggleDropDownMenu(1, nil, friendsDropdown, self, 0, -4)
+    GameTooltip:Hide()
+    friendsBtn:SetScript("OnUpdate", nil)
+    RefreshFriendsCache()
+    if button == "LeftButton" then
+        UIDropDownMenu_Initialize(friendsInviteDropdown, FriendsInviteDropdown_Initialize)
+        ToggleDropDownMenu(1, nil, friendsInviteDropdown, self, 0, -4)
+    elseif button == "RightButton" then
+        UIDropDownMenu_Initialize(friendsWhisperDropdown, FriendsWhisperDropdown_Initialize)
+        ToggleDropDownMenu(1, nil, friendsWhisperDropdown, self, 0, -4)
     end
     return true
 end)
@@ -684,11 +737,14 @@ guildBtn:SetScript("OnEnter", function(self)
 end)
 guildBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 guildBtn:SetScript("OnClick", function(self, button)
-    if button == "RightButton" then
-        GameTooltip:Hide()
-        RefreshGuildCache()
-        UIDropDownMenu_Initialize(guildDropdown, GuildDropdown_Initialize)
-        ToggleDropDownMenu(1, nil, guildDropdown, self, 0, -4)
+    GameTooltip:Hide()
+    RefreshGuildCache()
+    if button == "LeftButton" then
+        UIDropDownMenu_Initialize(guildInviteDropdown, GuildInviteDropdown_Initialize)
+        ToggleDropDownMenu(1, nil, guildInviteDropdown, self, 0, -4)
+    elseif button == "RightButton" then
+        UIDropDownMenu_Initialize(guildWhisperDropdown, GuildWhisperDropdown_Initialize)
+        ToggleDropDownMenu(1, nil, guildWhisperDropdown, self, 0, -4)
     end
     return true
 end)
